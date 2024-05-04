@@ -1,60 +1,34 @@
-.section .bss
-input_buffer: .space 256            # Allocate 256 bytes for input buffer
-
 .section .data
-
-.newline.str:
-    .ascii "\n"
-
-.whitespace.str:
-    .ascii " "
-
+    binary_str: .ascii "00000000\n"   # String to store binary representation, initialize with 8 zeros and a newline
 .section .text
 .global _start
 
-
-# r9: input
-# r13: single char of the input
-# r10: current number
 _start:
-    # Read input from standard input
-    mov $0, %eax                    # syscall number for sys_read
-    mov $0, %edi                    # file descriptor 0 (stdin)
-    lea input_buffer(%rip), %rsi    # pointer to the input buffer
-    mov $256, %edx                  # maximum number of bytes to read
-    syscall                         # perform the syscall
-
-    mov %rsi, %r9
-    mov $0, %r10
-
-    loop_start:
-        movzbq (%r9), %r13  # Move one byte from memory at address stored in r9 to r13
-        cmp $'\n', %r13                # Compare the character with newline ('\n')
-        je loop_end                # If it's null character, end the loop
-        
-        cmp $' ', %r13                # Compare the character with whitespace
-        jnz number_constructor
-           
-        # implement stack and computations here
-        # TODO: opertaiondan sonra 2 ekle ki stacke operation atmasın
-        # TODO: stacke pushladıktan sonra r10 u sıfıra esitle
-
-        add $1, %r9
-        jmp loop_start             # Continue looping
-
-        number_constructor:
-        mov $10, %rax    # for decimal significancy
-        mul %r10
-        mov %rax, %r10 
-        sub $48, %r13
-        add %r13, %r10
-
-        
-        add $1, %r9
-        jmp loop_start             # Continue looping
-    loop_end:
+    mov $0, %ecx          # Counter for the loop
+    mov $8, %edx          # Number of bits to process (assuming 8-bit integer)
+    
+bit_loop:
+    shl $1, %eax          # Shift the integer value in %eax left by 1 bit
+    jnc zero_bit          # Jump if carry flag is not set (bit shifted out was 0)
+    movb $'1', binary_str(%ecx)  # Set the corresponding character in binary_str to '1'
+    jmp continue_loop
+    
+zero_bit:
+    movb $'0', binary_str(%ecx)  # Set the corresponding character in binary_str to '0'
+    
+continue_loop:
+    inc %ecx              # Increment the loop counter
+    dec %edx              # Decrement the bits counter
+    jnz bit_loop          # Jump back to bit_loop if there are more bits to process
+    
+    # Print the binary representation
+    mov $4, %eax          # syscall number for sys_write
+    mov $1, %edi          # file descriptor 1 (stdout)
+    mov $binary_str, %rsi # address of binary_str
+    mov $9, %edx          # length of binary_str (including newline)
+    syscall
 
     # Exit the program
-    mov $60, %eax               # syscall number for sys_exit
-    xor %edi, %edi              # exit code 0
+    mov $60, %eax         # syscall number for sys_exit
+    xor %edi, %edi        # exit code 0
     syscall
