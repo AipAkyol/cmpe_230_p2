@@ -1,29 +1,47 @@
-# ----------------------------------------------------------------------------------------
-# Writes "Hello, World" to the console using only system calls. Runs on 64-bit Linux only.
-# To assemble and run:
-#
-#     gcc -c hello.s && ld hello.o && ./a.out
-#
-# or
-#
-#     gcc -nostdlib hello.s && ./a.out
-# ----------------------------------------------------------------------------------------
+.section .bss
+input_buffer: .space 256            # Allocate 256 bytes for input buffer
 
-        .global _start
+.section .data
 
-        .text
+
+.section .text
+.global _start
+
 _start:
-        # write(1, message, 13)
-        mov     $1, %rax                # system call 1 is write
-        mov     $1, %rdi                # file handle 1 is stdout
-        mov     $message, %rsi          # address of string to output
-        mov     $13, %rdx               # number of bytes
-        syscall                         # invoke operating system to do the write
+    # Read input from standard input
+    mov $0, %eax                    # syscall number for sys_read
+    mov $0, %edi                    # file descriptor 0 (stdin)
+    lea input_buffer(%rip), %rsi    # pointer to the input buffer
+    mov $256, %edx                  # maximum number of bytes to read
+    syscall                         # perform the syscall
 
-        # exit(0)
-        mov     $60, %rax               # system call 60 is exit
-        xor     %rdi, %rdi              # we want return code 0
-        syscall                         # invoke operating system to exit
-message:
-        .ascii  "Hello, world\n"
-        
+    call print_func
+    jmp exit_program  
+
+
+print_func:
+    # Assumes edx has size and rsi has address (popped from stack)
+    mov $1, %eax                    # syscall number for sys_write
+    mov $1, %edi                    # file descriptor 1 (stdout)
+    mov $0, %rcx                    # Counter for loop
+    loop_start:
+        cmp $'\n', %dl                # Compare the character with newline ('\n')
+        je loop_end                   # If it's newline, end the loop
+        mov (%rsi,%rcx,1), %rdx # Load the next character into %rdx
+        mov $1, %eax                # syscall number for sys_write
+        mov $1, %edi                # file descriptor 1 (stdout)
+        syscall                     # Print the character
+    #    mov $'\n', %rdx             # Load newline character into %rdx
+    #    mov $1, %eax                # syscall number for sys_write
+    #    mov $1, %edi                # file descriptor 1 (stdout)
+    #    syscall                     # Print the newline character
+        inc %rcx                    # Move to the next character
+        jmp loop_start              # Continue looping
+    loop_end:
+    ret
+
+exit_program:
+    # Exit the program
+    mov $60, %eax               # syscall number for sys_exit
+    xor %edi, %edi              # exit code 0
+    syscall
