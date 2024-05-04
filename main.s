@@ -25,16 +25,16 @@ print_func:
     mov $1, %edi                    # file descriptor 1 (stdout)
     mov $0, %rcx                    # Counter for loop
     loop_start:
+        mov (%rsi,%rcx,1), %rdx # Load the next character into %rdx
         cmp $'\n', %dl                # Compare the character with newline ('\n')
         je loop_end                   # If it's newline, end the loop
-        mov (%rsi,%rcx,1), %rdx # Load the next character into %rdx
         mov $1, %eax                # syscall number for sys_write
         mov $1, %edi                # file descriptor 1 (stdout)
         syscall                     # Print the character
-    #    mov $'\n', %rdx             # Load newline character into %rdx
-    #    mov $1, %eax                # syscall number for sys_write
-    #    mov $1, %edi                # file descriptor 1 (stdout)
-    #    syscall                     # Print the newline character
+        mov $'\n', %rdx             # Load newline character into %rdx
+        mov $1, %eax                # syscall number for sys_write
+        mov $1, %edi                # file descriptor 1 (stdout)
+        syscall                     # Print the newline character
         inc %rcx                    # Move to the next character
         jmp loop_start              # Continue looping
     loop_end:
