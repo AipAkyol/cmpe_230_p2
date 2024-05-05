@@ -2,10 +2,10 @@
 input_buffer: .space 256            # Allocate 256 bytes for input buffer
 
 .section .data
-    binary_str: .ascii "000000000000"   # String to store binary representation, initialize with 12 zeros and a newline
-    r2_str: .ascii " 00000 000 00010 0010011\n"
-    r1_str: .ascii " 00000 000 00001 0010011\n"
-    add_str: .ascii "0000000 00010 00001 000 00001 0110011\n"
+    binary_str: .ascii "000000000000"               # String to store binary representation, initialize with 12 zeros
+    r2_str: .ascii " 00000 000 00010 0010011\n"     # String to r2 portion of addi func
+    r1_str: .ascii " 00000 000 00001 0010011\n"     # String to r1 portion of addi func
+    add_str: .ascii "0000000 00010 00001 000 00001 0110011\n"   # strings for opperations
     sub_str: .ascii "0100000 00010 00001 000 00001 0110011\n"
     mul_str: .ascii "0000001 00010 00001 000 00001 0110011\n"
     and_str: .ascii "0000111 00010 00001 000 00001 0110011\n"
@@ -27,6 +27,7 @@ input_buffer: .space 256            # Allocate 256 bytes for input buffer
 # r10: current number
 # r14: operation reg1
 # r15: operation reg2
+# r12: binary print reg
 _start:
     # Read input from standard input
     mov $0, %eax                    # syscall number for sys_read
@@ -35,8 +36,8 @@ _start:
     mov $256, %edx                  # maximum number of bytes to read
     syscall                         # perform the syscall
 
-    mov %rsi, %r9
-    mov $0, %r10
+    mov %rsi, %r9        # save the input
+    mov $0, %r10         # init current number with 0
 
     loop_start:
         movzbq (%r9), %r13  # Move one byte from memory at address stored in r9 to r13
@@ -58,9 +59,9 @@ _start:
         cmp $'+', %r13                # Compare the character with +
         jnz subtraction
 
-        pop %r15
-        mov %r15, %r12
-        call _print_binary_number
+        pop %r15                       # last number pushed to the stack
+        mov %r15, %r12                  # to print the number in binary
+        call _print_binary_number       # these sections are all the same for all functions
         # Print the rest
         mov $1, %eax          # syscall number for sys_write
         mov $1, %edi          # file descriptor 1 (stdout)
@@ -68,7 +69,7 @@ _start:
         mov $25, %edx          # length of str
         syscall
 
-        pop %r14
+        pop %r14            # same with r15
         mov %r14, %r12
         call _print_binary_number
         # Print the rest
@@ -88,7 +89,7 @@ _start:
         mov $38, %edx          # length of str
         syscall
 
-        mov $0, %r14
+        mov $0, %r14        # reset the values
         mov $0, %r15
 
 
@@ -293,7 +294,7 @@ _start:
         jmp operation_skipper     # jump to operation skipper to skip whitespace after operation
 
 
-        operation_skipper:
+        operation_skipper:  # to skip the white space after operations to avoid stack push
         
         add $1, %r9
         
@@ -304,7 +305,7 @@ _start:
         add $1, %r9        # skip the whitespace
         jmp loop_start             # Continue looping
 
-        number_constructor:
+        number_constructor:    # if number did not finish, assuming correct syntax of the input, keep constructing the decimal number
         mov $10, %rax    # for decimal significancy
         mul %r10
         mov %rax, %r10 # multiplacation result
@@ -312,19 +313,10 @@ _start:
         add %r13, %r10 # append the new decimal to the rest
 
         
-        add $1, %r9
+        add $1, %r9        # next char
         jmp loop_start             # Continue looping
     loop_end:
 
-
-    # todo remove this
-    pop %r14
-#    movq $1, %rax
-#    movq $1, %rdi
-#    add $48, %r14
-#    movq %r14, %rsi
-#    movq $1, %rdx # +1 for asciz, if ascii no +1 needed
-#    syscall
 
     # Exit the program
     mov $60, %eax               # syscall number for sys_exit
